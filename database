@@ -1,0 +1,164 @@
+create database project1;
+use project1;
+
+create table Customer(
+    custId int primary key,
+    custName varchar(255) not null,
+    custAddress varchar(255) not null,
+    custPhone varchar(20) not null,
+    custEmail varchar(255) unique
+);
+
+create table Meter(
+    meterId int primary key,
+    custId int,
+    installDate date not null,
+    lastReadDate date not null,
+    foreign key (custId) references Customer(custId) on delete cascade
+);
+
+create table Electricity_Usage(
+    usageId int primary key,
+    meterId int,
+    readingDate date not null,
+    usageUnits numeric(10,2) check (usageUnits >= 0),
+    foreign key (meterId) references Meter(meterId) on delete cascade
+);
+
+create table Bill(
+    billId int primary key,
+    meterId int,
+    billDate date not null,
+    amountDue numeric(10,2) check (amountDue >= 0),
+    dueDate date not null,
+    paid tinyint not null default 0 check (paid in (0,1)),
+    foreign key (meterId) references Meter(meterId) on delete cascade
+);
+
+create table Payment(
+    paymentId int primary key,
+    billId int,
+    paymentDate date not null,
+    amountPaid numeric(10,2) check (amountPaid >= 0),
+    foreign key (billId) references Bill(billId) on delete cascade
+);
+
+
+
+insert into Customer values
+(201,'Arun Kumar','12, Anna Nagar, Chennai','9876512345','arun.kumar@gmail.com'),
+(202,'Deepika R','45, Gandhi Road, Salem','9003456678','deepika.r@gmail.com'),
+(203,'Manoj Varma','78, MG Layout, Bengaluru','9898765432','manoj.varma@gmail.com'),
+(204,'Priya Shanmugam','22B, East Street, Madurai','8500098765','priya.shan@gmail.com'),
+(205,'Vikram Raj','5/12, Market Street, Coimbatore','9090456781','vikram.raj@gmail.com');
+
+insert into Customer values
+(206,'Lakshmi N','10/4, Rasi Nagar, Tiruchy','9512340078','lakshmi.n@gmail.com'),
+(207,'Rohit Sharma','33, Nehru Street, Erode','8796543201','rohit.sharma@gmail.com');
+
+
+
+insert into Meter values
+(301,201,'2024-01-12','2024-02-10'),
+(302,202,'2024-01-20','2024-02-14'),
+(303,203,'2024-02-05','2024-03-01'),
+(304,204,'2024-02-10','2024-03-05'),
+(305,205,'2024-02-18','2024-03-10');
+
+insert into Meter values
+(306,206,'2024-03-01','2024-04-01'),
+(307,207,'2024-03-05','2024-04-05');
+
+
+
+insert into Electricity_Usage values
+(401,301,'2024-02-10',135.50),
+(402,302,'2024-02-14',112.75),
+(403,303,'2024-03-01',180.20),
+(404,304,'2024-03-05',210.00),
+(405,305,'2024-03-10',250.80);
+
+insert into Electricity_Usage values
+(406,306,'2024-04-01',130.00),
+(407,307,'2024-04-05',95.40);
+
+
+
+insert into Bill values
+(501,301,'2024-02-11',920.50,'2024-02-20',0),
+(502,302,'2024-02-15',780.00,'2024-02-25',1),
+(503,303,'2024-03-02',1050.75,'2024-03-12',0),
+(504,304,'2024-03-06',1475.00,'2024-03-16',1),
+(505,305,'2024-03-11',1890.30,'2024-03-20',0);
+
+insert into Bill values
+(506,306,'2024-04-02',860.40,'2024-04-12',1),
+(507,307,'2024-04-06',690.00,'2024-04-15',1);
+
+
+
+insert into Payment values
+(601,501,'2024-02-19',920.50),
+(602,502,'2024-02-23',780.00),
+(603,503,'2024-03-10',1050.75),
+(604,504,'2024-03-14',1475.00),
+(605,505,'2024-03-18',1890.30);
+
+insert into Payment values
+(606,506,'2024-04-10',860.40),
+(607,507,'2024-04-14',690.00);
+
+
+
+select * from Customer;
+select * from Meter;
+select * from Electricity_Usage;
+select * from Bill;
+select * from Payment;
+
+select c.custId, c.custName, c.custAddress, c.custPhone, c.custEmail,
+       m.meterId, m.installDate, m.lastReadDate,
+       e.usageId, e.readingDate, e.usageUnits,
+       b.billId, b.billDate, b.amountDue, b.dueDate, b.paid,
+       p.paymentId, p.paymentDate, p.amountPaid
+from Customer c
+left join Meter m on c.custId = m.custId
+left join Electricity_Usage e on m.meterId = e.meterId
+left join Bill b on b.meterId = m.meterId
+left join Payment p on p.billId = b.billId;
+
+update Meter set custId = 202 where meterId = 302;
+
+select meterId, sum(usageUnits) as Units
+from Electricity_Usage
+group by meterId
+having sum(usageUnits) > 200;
+
+select c.custId, c.custName, sum(b.amountDue) as Unpaid_Amount
+from Customer c
+left join Meter m on c.custId = m.custId
+left join Bill b on m.meterId = b.meterId
+where b.paid = 0
+group by c.custId, c.custName
+order by Unpaid_Amount desc;
+
+select billId, billDate, amountDue,
+       case when paid = 1 then 'Paid' else 'Not Paid' end as Payment_Status
+from Bill
+order by billDate;
+
+select c.custId, c.custName, m.installDate
+from Customer c
+join Meter m on c.custId = m.custId
+where m.installDate > '2024-02-28';
+
+select m.meterId, m.lastReadDate, sum(e.usageUnits) as Total_Usage
+from Meter m
+join Electricity_Usage e on m.meterId = e.meterId
+group by m.meterId, m.lastReadDate
+order by Total_Usage desc;
+
+delete p
+from Payment p
+join Bill b on p.billId = b.billId
+where b.paid = 0;
